@@ -1,0 +1,34 @@
+<policies>
+    <inbound>
+        <base />
+        <!-- Extract model name from request body for metrics -->
+        <set-variable name="requested-model" value="@{try{var b=context.Request.Body.As&lt;JObject&gt;(preserveContent:true);return(string)b[&quot;model&quot;]??&quot;unknown&quot;;}catch{return&quot;unknown&quot;;}}" />
+        <!-- Emit token metrics to Application Insights for chargeback dashboards -->
+        <llm-emit-token-metric namespace="aigw-token-metrics">
+            <dimension name="Team" value="@(context.Product.Name ?? &quot;unknown&quot;)" />
+            <dimension name="API" value="@(context.Api.Name)" />
+            <dimension name="Subscription" value="@(context.Subscription.Name ?? &quot;unknown&quot;)" />
+            <dimension name="Model" value="@((string)context.Variables[&quot;requested-model&quot;])" />
+        </llm-emit-token-metric>
+        <!-- Route to the priority-based backend pool (eus2 primary, swc failover) -->
+        <set-backend-service backend-id="foundry-pool" />
+        <!-- Strip api-version only for v1 paths (v1 rejects it with HTTP 400).
+             Deployment-based paths (/deployments/...) need api-version to stay. -->
+        <choose>
+            <when condition="@(context.Request.Url.Path.Contains(&quot;/v1/&quot;))">
+                <set-query-parameter name="api-version" exists-action="delete" />
+            </when>
+        </choose>
+        <!-- Auth to Foundry via APIM system-assigned managed identity -->
+        <authentication-managed-identity resource="https://cognitiveservices.azure.com/" />
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

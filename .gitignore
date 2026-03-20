@@ -1,0 +1,51 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+!terraform.tfvars.example
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Secrets
+*.pem
+*.key
+local.settings.json
+.env
+
+# Terraform artifacts
+*.tfplan
+
+# Internal planning docs (contain customer references — do not commit)
+customer-sanity-check.md
+PLAN.md
+PLAN.v2.md
+v2plan.md
+improvements.md

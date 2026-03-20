@@ -1,0 +1,41 @@
+<policies>
+    <inbound>
+        <base />
+        <!-- Correlation ID for request tracing -->
+        <set-header name="X-Correlation-Id" exists-action="override">
+            <value>@(context.RequestId)</value>
+        </set-header>
+        <!-- Parse body to check method type -->
+        <set-variable name="body" value="@(context.Request.Body.As&lt;string&gt;(preserveContent: true))" />
+        <choose>
+            <!-- Write operations: stricter rate limit -->
+            <when condition="@{
+                var body = (string)context.Variables[&quot;body&quot;];
+                var json = Newtonsoft.Json.Linq.JObject.Parse(body);
+                var method = json[&quot;method&quot;]?.ToString() ?? &quot;&quot;;
+                return method == &quot;tools/call&quot;;
+            }">
+                <rate-limit-by-key
+                    calls="10"
+                    renewal-period="60"
+                    counter-key="@(context.Request.Headers.GetValueOrDefault(&quot;Mcp-Session-Id&quot;, &quot;unknown&quot;))" />
+            </when>
+            <!-- Read operations (list tools, etc): more generous -->
+            <otherwise>
+                <rate-limit-by-key
+                    calls="60"
+                    renewal-period="60"
+                    counter-key="@(context.Request.Headers.GetValueOrDefault(&quot;Mcp-Session-Id&quot;, &quot;unknown&quot;))" />
+            </otherwise>
+        </choose>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

@@ -1,0 +1,18 @@
+<policies>
+    <inbound>
+        <base />
+        <!-- Team Beta: moderate rate limit — internal support tools -->
+        <!-- Replace with llm-token-limit after importing Foundry API via portal -->
+        <rate-limit-by-key calls="200" renewal-period="60"
+            counter-key="@(context.Subscription.Id)" />
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

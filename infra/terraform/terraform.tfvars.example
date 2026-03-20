@@ -1,0 +1,6 @@
+subscription_id = "<your-azure-subscription-id>"
+# Uncomment and customize as needed:
+# resource_group_name = "rg-ai-gateway-demo"
+# location_primary    = "eastus2"
+# location_secondary  = "swedencentral"
+# prefix              = "aigw"
