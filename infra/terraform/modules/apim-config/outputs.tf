@@ -24,3 +24,8 @@ output "backend_primary_id" {
 output "backend_secondary_id" {
   value = azapi_resource.backend_secondary.id
 }
+
+output "mcp_demo_subscription_key" {
+  value     = var.enable_mcp_demo ? azurerm_api_management_subscription.mcp_demo[0].primary_key : null
+  sensitive = true
+}

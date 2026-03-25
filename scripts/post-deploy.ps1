@@ -15,6 +15,7 @@
       6. Applies the API-level policy XML (token metrics, backend pool, MI auth)
       7. Upgrades product policies from rate-limit-by-key to llm-token-limit
       8. Exports a .env file and prints shell env commands
+      9. Checks for MCP product and provides governance guidance (Phase 2)
 
 .EXAMPLE
     .\scripts\post-deploy.ps1
@@ -28,24 +29,24 @@ $ErrorActionPreference = "Stop"
 function Write-Step {
     param([int]$Number, [string]$Title)
     Write-Host ""
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host ("=" * 65) -ForegroundColor Cyan
     Write-Host "  Step ${Number}: $Title" -ForegroundColor Cyan
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host ("=" * 65) -ForegroundColor Cyan
 }
 
 function Write-Ok {
     param([string]$Message)
-    Write-Host "  ✓ $Message" -ForegroundColor Green
+    Write-Host "  [OK] $Message" -ForegroundColor Green
 }
 
 function Write-Info {
     param([string]$Message)
-    Write-Host "  → $Message" -ForegroundColor Yellow
+    Write-Host "  $Message" -ForegroundColor Yellow
 }
 
 function Write-Warn {
     param([string]$Message)
-    Write-Host "  ⚠ $Message" -ForegroundColor DarkYellow
+    Write-Host "  [WARN] $Message" -ForegroundColor DarkYellow
 }
 
 function Invoke-AzRest {
@@ -170,7 +171,7 @@ if (-not $apis -or $apis.Count -eq 0) {
     Write-Error @"
 No API with path containing 'openai' found in APIM '$apimName'.
 Have you completed the manual portal import step?
-  APIM → APIs → + Add API → Azure OpenAI Service → select Foundry endpoint
+  APIM -> APIs -> + Add API -> Azure OpenAI Service -> select Foundry endpoint
 "@
     exit 1
 }
@@ -282,10 +283,10 @@ foreach ($productId in $products) {
         --only-show-errors 2>&1
 
     if ($LASTEXITCODE -eq 0) {
-        Write-Ok "$productId ← $apiId"
+        Write-Ok "$productId <- $apiId"
     } else {
         if ($addResult -match "already exists" -or $addResult -match "ApiAlreadyAdded") {
-            Write-Ok "$productId ← $apiId (already linked)"
+            Write-Ok "$productId <- $apiId (already linked)"
         } else {
             Write-Warn "Failed to add API to $productId`: $addResult"
         }
@@ -340,7 +341,7 @@ Invoke-AzRest -Method PUT `
     -Uri "https://management.azure.com$apimId/apis/$apiId/diagnostics/applicationinsights?api-version=$apiVersion" `
     -Body $aiBody
 
-Write-Ok "applicationinsights diagnostic: metrics enabled → App Insights"
+Write-Ok "applicationinsights diagnostic: metrics enabled -> App Insights"
 
 # ── Step 5: Apply API-level policy XML ──────────────────────────────────────
 
@@ -416,7 +417,7 @@ foreach ($product in $productPolicies) {
         -Uri "https://management.azure.com$apimId/products/$($product.Id)/policies/policy?api-version=$apiVersion" `
         -Body $productPolicyBody
 
-    Write-Ok "$($product.Label) → llm-token-limit applied"
+    Write-Ok "$($product.Label) -> llm-token-limit applied"
 }
 
 # ── Step 7: Export environment variables ────────────────────────────────────
@@ -465,17 +466,50 @@ foreach ($kv in $envVars.GetEnumerator()) {
 }
 Write-Ok "Environment variables set in current session"
 
+# ── Step 8: MCP Tool Governance (Phase 2) ───────────────────────────────────
+
+Write-Step 8 "Checking for MCP Tool Governance product"
+
+$mcpProductJson = az apim product show -g $rg -n $apimName --product-id "mcp-tools" -o json 2>&1
+$mcpProduct = $null
+if ($LASTEXITCODE -eq 0) {
+    try {
+        $mcpProduct = $mcpProductJson | ConvertFrom-Json
+    } catch {
+        # Not JSON, ignore
+    }
+}
+
+if ($mcpProduct) {
+    Write-Host ""
+    Write-Host ("=" * 65) -ForegroundColor Cyan
+    Write-Host "  MCP Tool Governance Product Detected" -ForegroundColor Cyan
+    Write-Host ("=" * 65) -ForegroundColor Cyan
+    Write-Host ""
+    
+    Write-Info "Next steps for MCP Tool Governance:"
+    Write-Host "  1. Register MCP server in APIM portal (portal-only as of March 2026)" -ForegroundColor Gray
+    Write-Host "  2. Apply governance policy from: scripts/policies/mcp-governance.xml" -ForegroundColor Gray
+    Write-Host "  3. Run integration tests: python tests/test_mcp_governance.py" -ForegroundColor Gray
+    Write-Host ""
+    Write-Info "To apply the MCP governance policy (after portal registration):"
+    Write-Host "  az apim product policy set -g $rg -n $apimName --product-id mcp-tools --policy-filepath scripts/policies/mcp-governance.xml" -ForegroundColor DarkGray
+    Write-Host ""
+} else {
+    Write-Info "MCP product not found in this deployment (expected if MCP is not yet provisioned)"
+}
+
 # ── Done ─────────────────────────────────────────────────────────────────────
 
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+Write-Host ("=" * 65) -ForegroundColor Green
 Write-Host "  Post-deploy complete!" -ForegroundColor Green
-Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+Write-Host ("=" * 65) -ForegroundColor Green
 Write-Host ""
 Write-Host "  Verify in portal:" -ForegroundColor White
-Write-Host "    1. APIM → APIs → '$apiName' should show the policy XML" -ForegroundColor Gray
-Write-Host "    2. APIM → APIs → Settings → Diagnostic Logs → Azure Monitor → LLM = Enabled" -ForegroundColor Gray
-Write-Host "    3. APIM → Products → each team → Policies → llm-token-limit visible" -ForegroundColor Gray
+Write-Host "    1. APIM -> APIs -> '$apiName' should show the policy XML" -ForegroundColor Gray
+Write-Host "    2. APIM -> APIs -> Settings -> Diagnostic Logs -> Azure Monitor -> LLM = Enabled" -ForegroundColor Gray
+Write-Host "    3. APIM -> Products -> each team -> Policies -> llm-token-limit visible" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  Quick test:" -ForegroundColor White
 Write-Host "    python -c `"" -ForegroundColor Gray -NoNewline

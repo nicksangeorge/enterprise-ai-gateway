@@ -49,3 +49,8 @@ PLAN.md
 PLAN.v2.md
 v2plan.md
 improvements.md
+
+# Internal planning/draft files (not for main)
+internal/
+mcp-demo.auto.tfvars
+*.tfstate.backup

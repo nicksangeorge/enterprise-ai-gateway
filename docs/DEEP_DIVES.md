@@ -1,6 +1,6 @@
 # Deep dives
 
-This demo covers the integrated enterprise story. For hands-on exploration of individual capabilities, use these labs from the [Azure-Samples/AI-Gateway](https://github.com/Azure-Samples/ai-gateway) repository. Each is a self-contained Jupyter notebook with Bicep templates and APIM policies.
+This demo covers the full enterprise setup. To explore individual features in depth, use these labs from the [Azure-Samples/AI-Gateway](https://github.com/Azure-Samples/ai-gateway) repository. Each is a self-contained Jupyter notebook with Bicep templates and APIM policies.
 
 ## Models
 
@@ -29,7 +29,7 @@ This demo covers the integrated enterprise story. For hands-on exploration of in
 
 ## Additional resources
 
-- [AI Gateway Workshop](https://aka.ms/ai-gateway/workshop): structured walkthrough of core capabilities
-- [Enterprise AI Gateway eBook](https://github.com/Azure-Samples/AI-Gateway/blob/main/docs/media/Enterprise%20AI%20Gateway%20eBook%20-%20Feb%202026.pdf): end-to-end architecture guide
+- [AI Gateway Workshop](https://aka.ms/ai-gateway/workshop): structured walkthrough of core features
+- [Enterprise AI Gateway eBook](https://github.com/Azure-Samples/AI-Gateway/blob/main/docs/media/Enterprise%20AI%20Gateway%20eBook%20-%20Feb%202026.pdf): full architecture guide
 - [AI Gateway reference architecture](https://learn.microsoft.com/en-us/ai/playbook/technology-guidance/generative-ai/dev-starters/genai-gateway/reference-architectures/apim-based): Microsoft's official reference
 - [Secure remote MCP via APIM sample](https://github.com/Azure-Samples/remote-mcp-apim-functions-python): Python/Functions/OAuth implementation

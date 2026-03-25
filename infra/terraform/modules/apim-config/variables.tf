@@ -47,3 +47,16 @@ variable "tags" {
   type    = map(string)
   default = {}
 }
+
+# Phase 2: MCP Tool Governance
+variable "enable_mcp_demo" {
+  description = "Enable MCP governance product and subscription"
+  type        = bool
+  default     = false
+}
+
+variable "mcp_server_url" {
+  description = "URL of the MCP server to govern"
+  type        = string
+  default     = null
+}

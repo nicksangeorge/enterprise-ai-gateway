@@ -43,7 +43,13 @@ def check_env():
 
 def get_mcp_url():
     """Build the MCP endpoint URL from environment variables."""
+    if os.environ.get("AIGW_MCP_URL"):
+        return os.environ["AIGW_MCP_URL"].rstrip("/")
     gw = os.environ["AIGW_GATEWAY_URL"].rstrip("/")
+    for suffix in ["/openai/v1", "/openai"]:
+        if gw.endswith(suffix):
+            gw = gw[:-len(suffix)]
+            break
     path = os.environ.get("AIGW_MCP_PATH", "learn")
     return f"{gw}/{path}/mcp"
 
@@ -67,12 +73,12 @@ def mcp_request(url, method, params=None, session_id=None, api_key=None):
         body["params"] = params
 
     if VERBOSE:
-        print(f"  → POST {url}  method={method}  session={session_id}")
+        print(f"  -> POST {url}  method={method}  session={session_id}")
 
     resp = requests.post(url, json=body, headers=headers, timeout=30)
 
     if VERBOSE:
-        print(f"  ← {resp.status_code}  {resp.text[:200]}")
+        print(f"  <- {resp.status_code}  {resp.text[:200]}")
 
     return resp
 
@@ -111,6 +117,7 @@ def test_tools_call_rate_limit():
     call_params = {"name": "search", "arguments": {"query": "rate-limit-test"}}
 
     total = 20
+    print(f"  POST {url}")
     print(f"  Sending {total} concurrent tools/call requests (limit: 10/60s) ...")
     statuses = _burst(url, "tools/call", call_params, session_id, api_key, total)
 
@@ -120,14 +127,14 @@ def test_tools_call_rate_limit():
 
     # Accept token-bucket imprecision: 429 should appear, and ≤15 should pass
     if fail_count > 0 and ok_count <= 15:
-        print(f"✅ tools/call rate limit: {ok_count} passed (limit 10, "
-              f"tolerance ≤15 for v2 token-bucket)")
+        print(f"PASS: tools/call rate limit: {ok_count} passed (limit 10, "
+              f"tolerance <=15 for v2 token-bucket)")
         return True
     elif fail_count == 0:
-        print(f"❌ tools/call rate limit: never hit 429 in {total} concurrent requests")
+        print(f"FAIL: tools/call rate limit: never hit 429 in {total} concurrent requests")
         return False
     else:
-        print(f"❌ tools/call rate limit: {ok_count} passed, expected ≤15")
+        print(f"FAIL: tools/call rate limit: {ok_count} passed, expected <=15")
         return False
 
 
@@ -153,15 +160,15 @@ def test_tools_list_rate_limit():
 
     # Token-bucket tolerance: accept if ≤75 passed (60 + 25% headroom)
     if fail_count > 0 and ok_count <= 75:
-        print(f"✅ tools/list rate limit: {ok_count} passed (limit 60, "
-              f"tolerance ≤75 for v2 token-bucket)")
+        print(f"PASS: tools/list rate limit: {ok_count} passed (limit 60, "
+              f"tolerance <=75 for v2 token-bucket)")
         return True
     elif fail_count == 0:
-        print(f"⚠️  tools/list rate limit: no 429s in {total} concurrent requests "
+        print(f"WARN:  tools/list rate limit: no 429s in {total} concurrent requests "
               f"(v2 token-bucket imprecision may allow this)")
         return True  # Don't fail — v2 imprecision is documented
     else:
-        print(f"❌ tools/list rate limit: {ok_count} passed, expected ≤75")
+        print(f"FAIL: tools/list rate limit: {ok_count} passed, expected <=75")
         return False
 
 
@@ -199,23 +206,23 @@ def test_session_isolation():
                 b_ok += 1
                 print(f"    B [{i+1}] {resp.status_code}")
             else:
-                print(f"    B [{i+1}] 429 — unexpectedly rate limited!")
+                print(f"    B [{i+1}] 429 - unexpectedly rate limited!")
         except Exception as e:
             print(f"    B [{i+1}] ERROR: {e}")
 
     if a_limited and b_ok == 5:
-        print(f"✅ session isolation: A is limited, B passed all 5 requests")
+        print(f"PASS: session isolation: A is limited, B passed all 5 requests")
         return True
     elif not a_limited:
         if a_429s > 0:
-            print(f"⚠️  session isolation: A was limited during burst ({a_429s} "
-                  f"429s) but refilled by check time — token-bucket artifact")
+            print(f"WARN:  session isolation: A was limited during burst ({a_429s} "
+                  f"429s) but refilled by check time - token-bucket artifact")
             if b_ok == 5:
                 return True
-        print(f"❌ session isolation: session A was not rate limited (got {resp_a.status_code})")
+        print(f"FAIL: session isolation: session A was not rate limited (got {resp_a.status_code})")
         return False
     else:
-        print(f"❌ session isolation: session B had {5 - b_ok} unexpected failures")
+        print(f"FAIL: session isolation: session B had {5 - b_ok} unexpected failures")
         return False
 
 
@@ -235,16 +242,16 @@ def test_rate_limit_includes_retry_after():
                        session_id=session_id, api_key=api_key)
 
     if resp.status_code != 429:
-        print(f"❌ retry-after: expected 429, got {resp.status_code} "
+        print(f"FAIL: retry-after: expected 429, got {resp.status_code} "
               f"(token-bucket may have refilled)")
         return False
 
     retry_after = resp.headers.get("Retry-After")
     if retry_after:
-        print(f"✅ retry-after: 429 response includes Retry-After: {retry_after}s")
+        print(f"PASS: retry-after: 429 response includes Retry-After: {retry_after}s")
         return True
     else:
-        print(f"❌ retry-after: 429 response missing Retry-After header")
+        print(f"FAIL: retry-after: 429 response missing Retry-After header")
         if VERBOSE:
             print(f"  Response headers: {dict(resp.headers)}")
         return False

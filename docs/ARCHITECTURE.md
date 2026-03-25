@@ -1,5 +1,7 @@
 # Architecture
 
+> **Setup:** See [QUICKSTART.md](QUICKSTART.md) for the deployment walkthrough.
+
 ## Overview
 
 APIM Standard v2 in East US 2 is the single entry point for all LLM inference across the organization. Three teams (Product Engineering, Customer Support AI, and Innovation Lab) hit the same gateway with different quotas and subscription keys. Behind APIM, Microsoft Foundry backends in East US 2 (primary) and Sweden Central (failover) host the model deployments. A backend pool with priority-based load balancing and circuit breakers handles failover automatically when a region runs out of quota. App Insights captures per-request token metrics with team, model, and region dimensions, which feeds the chargeback reporting.
@@ -64,9 +66,33 @@ graph TB
 
 The backend pool uses priority-based load balancing. East US 2 backends sit at priority 1, Sweden Central at priority 2. Under normal conditions, all traffic goes to East US 2. Sweden Central only receives traffic when the primary region is unavailable or throttled.
 
-Circuit breakers watch for 429 responses from Foundry backends. When a backend starts returning 429 (quota exceeded), the circuit trips and APIM stops sending traffic to it. The trip duration isn't hardcoded. APIM reads the `Retry-After` header from the 429 response and uses that value to decide how long to keep the circuit open. This means recovery is automatic and matched to actual backend quota replenishment.
+Circuit breakers watch for 429 responses from Foundry backends. When a backend starts returning 429 (quota exceeded), the circuit trips and APIM stops sending traffic to it. The trip duration isn't hardcoded. APIM reads the `Retry-After` header from the 429 response and uses that value to decide how long to keep the circuit open. Recovery timing matches the backend's actual quota replenishment.
 
 From a consumer's perspective, none of this is visible. They call the same APIM endpoint with the same subscription key regardless of which backend region handles the request. A quota spike in East US 2 doesn't produce errors. Traffic fails over transparently to Sweden Central.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant APIM
+    participant EUS2 as East US 2 (Priority 1)
+    participant SWC as Sweden Central (Priority 2)
+
+    Client->>APIM: POST /openai/v1/chat/completions
+    APIM->>EUS2: Forward
+    EUS2-->>APIM: 429 Retry-After: 30s
+    Note over APIM: Circuit breaker trips
+    APIM->>SWC: Retry to failover region
+    SWC-->>APIM: 200 OK
+    APIM-->>Client: 200 OK
+```
+
+## Teams
+
+| Team | Persona | TPM quota | Models |
+|------|---------|-----------|--------|
+| Alpha | Product Engineering | 50,000 | GPT-5.1, Model Router |
+| Beta | Customer Support AI | 20,000 | Model Router |
+| Gamma | Innovation Lab | 500 | GPT-5.1, Kimi-K2.5 |
 
 ## Auth model
 
@@ -104,7 +130,18 @@ The `llm-emit-token-metric` APIM policy captures both costs. It emits custom met
 
 Three registration paths feed into one catalog. APIM-native MCP servers sync automatically when configured in APIM. Foundry-managed tools (like grounding with Bing Search or Azure AI Search) sync from the Foundry project. Partner or custom MCP servers get registered directly in API Center.
 
-All three paths converge on APIM as the governed execution layer. Developers discover tools through API Center, but every invocation routes through APIM policies: same auth, same rate limiting, same logging as LLM inference. One discovery surface, one governance layer.
+All three paths route through APIM as the execution layer. Developers discover tools through API Center, but every invocation goes through APIM policies with the same auth, rate limiting, and logging as LLM inference.
+
+### Phase 2: MCP Tool Governance
+
+**MCP Tool Governance** extends the gateway's policy framework to cover tool invocations alongside LLM inference. Phase 2 introduces:
+
+- Declarative policy definitions for tool invocation (request validation, response filtering)
+- Tool-level quotas and rate limiting per consumer
+- Audit trails for all tool calls
+- Integration with API Center for policy discovery alongside tool metadata
+
+This builds on the current single-API design and APIM catalog, adding governance primitives that apply to Foundry tools, APIM-managed APIs, and third-party MCP servers.
 
 ## API path
 

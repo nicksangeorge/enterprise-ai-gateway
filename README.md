@@ -1,24 +1,31 @@
 # Enterprise AI Gateway
 
-> Provided diagrams, documents, and code are provided AS IS without warranty of any kind. MICROSOFT MAKES NO WARRANTIES, EXPRESS OR IMPLIED, IN THIS DOCUMENT OR CODE SAMPLE.
+Reference implementation: APIM as the control plane for LLM traffic and agent tool governance.
 
-> This is a reference implementation for demo and architecture discussions, not production deployment. Validate all configurations against your own environment before production use.
+> Provided diagrams, documents, and code are provided AS IS without warranty of any kind. MICROSOFT MAKES NO WARRANTIES, EXPRESS OR IMPLIED, IN THIS DOCUMENT OR CODE SAMPLE. This is a reference implementation for demo and architecture discussions, not production deployment. Validate all configurations against your own environment before production use.
 
 ## The scenario
 
-Platform engineering teams need a single control plane for LLM traffic. They want to know which team consumed how many tokens on which model, enforce per-team quotas so the innovation lab doesn't starve production workloads, and fail over between regions without anyone noticing.
+Enterprise AI platforms run into a common set of challenges:
 
-Microsoft has all the pieces. Azure API Management has AI gateway policies for token tracking and rate limiting. Microsoft Foundry hosts the models. App Insights collects the metrics. The individual [AI Gateway labs](https://github.com/Azure-Samples/AI-Gateway) each show one capability in isolation. This repo wires them together into the full enterprise story.
+- **Model availability.** Quota throttling, regional outages, one team starving another. Production workloads need reliable inference.
+- **Cost visibility.** Which teams are consuming how many tokens, on which models, and what does it cost. Without this, AI spend is a black box.
+- **Tool governance.** Agents calling whatever tools they want with no standards. No centralized catalog or rate limits. No audit trail.
+- **Enforcement levers.** Your teams set the standards for how agents behave in production. They need infrastructure to enforce those standards: governed tool catalogs, rate limits per session, audit trails, and identity-scoped access.
 
-## What you get when you deploy this
+The repo implements a working answer using APIM, Foundry, and API Center. Here's what it looks like when deployed:
 
-- Token metrics flow to App Insights with team, model, and subscription dimensions. Run a KQL query, get a chargeback report.
-- Three teams with different TPM quotas (50K, 20K, 500). Gamma hits 429 when they exceed theirs. Alpha doesn't.
-- East US 2 is primary. When it runs out of quota, the circuit breaker reads the Retry-After header and routes to Sweden Central. Developers change nothing.
-- GPT-5.1, Model Router, Kimi-K2.5 all route through `/openai/v1/chat/completions` with the standard `OpenAI()` SDK.
-- MCP servers proxied through APIM with rate limits, logging, and read/write separation. API Center as the org-wide discovery surface.
+**Rate limiting.** Per-team token quotas. Gamma's innovation lab gets 500 TPM. Alpha's production workload gets 50K. Same gateway, different limits. Gamma hits 429 when they exceed theirs. Alpha doesn't notice.
+
+**Failover.** Circuit breaker reads the Retry-After header, routes to the failover region. Developers change nothing. Same endpoint, same key.
+
+**Tool catalog.** MCP servers registered in APIM with rate limits, correlation IDs, and audit logs per call. Any agent (Foundry, Copilot, or custom) consumes governed tools through one URL. API Center is the discovery surface.
+
+**Chargeback.** Token metrics flow to App Insights with team, model, and subscription dimensions. One KQL query gives you a chargeback report.
 
 ## Architecture
+
+### LLM Gateway
 
 Three teams hit one APIM gateway. APIM enforces quotas, emits token metrics, and routes to a backend pool across two Foundry regions. Circuit breakers handle failover.
 
@@ -57,133 +64,99 @@ flowchart TB
     apim -.-> obs
 ```
 
-When East US 2 returns 429, the circuit breaker trips (respects Retry-After) and routes to Sweden Central. Developers hit the same endpoint with the same key.
+### MCP Tool Governance
 
-### Failover sequence
+Agents consume governed MCP tools through the same gateway. Each method call gets its own rate limit, correlation ID, and audit log entry. API Center provides the discovery surface.
 
 ```mermaid
-sequenceDiagram
-    participant Client
-    participant APIM
-    participant EUS2 as East US 2 (Priority 1)
-    participant SWC as Sweden Central (Priority 2)
+flowchart LR
+    subgraph agents["AI Agents"]
+        fa["Foundry Agent"]
+        co["GitHub Copilot"]
+        ca["Custom Agent"]
+    end
 
-    Client->>APIM: POST /openai/v1/chat/completions
-    APIM->>EUS2: Forward
-    EUS2-->>APIM: 429 Retry-After: 30s
-    Note over APIM: Circuit breaker trips
-    APIM->>SWC: Retry to failover region
-    SWC-->>APIM: 200 OK
-    APIM-->>Client: 200 OK
+    subgraph apim["APIM Gateway"]
+        pol["Rate limit<br/>Correlation ID<br/>Audit log"]
+    end
+
+    subgraph tools["MCP Servers"]
+        learn["Microsoft Learn"]
+        custom["Your APIs"]
+    end
+
+    subgraph catalog["API Center"]
+        disc["Discovery<br/>+ Governance"]
+    end
+
+    agents --> apim
+    apim --> tools
+    apim -.-> catalog
 ```
 
-## Azure products used
-
-| Product | What it does here |
-|---------|------------------|
-| [Azure API Management](https://learn.microsoft.com/en-us/azure/api-management/api-management-key-concepts) | Single entry point. Token quotas, chargeback metrics, backend pool routing, managed identity auth. |
-| [AI Gateway in APIM](https://learn.microsoft.com/en-us/azure/api-management/genai-gateway-capabilities) | `llm-token-limit` and `llm-emit-token-metric` policies for token governance. |
-| [Microsoft Foundry](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle) | Hosts model deployments (GPT-5.1, Model Router, Kimi-K2.5). v1 unified API path. |
-| [App Insights](https://learn.microsoft.com/en-us/azure/azure-monitor/app/app-insights-overview) | Token metrics with team/model/subscription dimensions for chargeback. |
-| [Log Analytics](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/log-analytics-overview) | Gateway logs and LLM request/response audit trail. |
-| [API Center](https://learn.microsoft.com/en-us/azure/api-center/overview) | Unified tool/MCP discovery catalog across the org. |
-
-## Teams
-
-| Team | Persona | TPM quota | Models |
-|------|---------|-----------|--------|
-| Alpha | Product Engineering | 50,000 | GPT-5.1, Model Router |
-| Beta | Customer Support AI | 20,000 | Model Router |
-| Gamma | Innovation Lab | 500 | GPT-5.1, Kimi-K2.5 |
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for component details, failover sequence diagrams, and design decisions.
 
 ## Deploy it
 
-See [docs/QUICKSTART.md](docs/QUICKSTART.md) for the full walkthrough. About 25 minutes from clone to first passing test.
+See [QUICKSTART.md](docs/QUICKSTART.md) for the full walkthrough. ~25 min for the LLM gateway, ~40 min with MCP governance.
 
 ```
-terraform apply → 2 portal steps → post-deploy script → run tests
+terraform apply → portal steps → post-deploy script → run tests
 ```
+
+## What's included
+
+| Component | What | Details |
+|-----------|------|---------|
+| `infra/terraform/` | Infrastructure as Code | APIM, Foundry (2 regions), App Insights, API Center |
+| `scripts/` | Setup automation | Post-deploy config, MCP setup, API Center sync, env vars |
+| `tests/` | Automated validation | 7 LLM gateway tests + 4 MCP governance + 4 MCP rate limit + Foundry agent test |
+| `dashboards/` | KQL queries + workbook | Token chargeback, model usage, failover events |
+
+## Dashboard
+
+Token metrics, model usage, failover events, and cost estimation all flow into App Insights and Log Analytics. Import the workbook from `dashboards/` to recreate these panels.
+
+![Token usage by team](docs/images/dashboard-token-by-team.png)
+
+![Cost estimation by team](docs/images/dashboard-cost-estimation.png)
+
+See `dashboards/queries.md` for all KQL queries and additional dashboard panels.
+
+## API Center
+
+APIM APIs and MCP servers sync to API Center, giving teams a searchable catalog of every governed endpoint and tool across the org.
+
+![API Center Portal](docs/images/api-center-portal.png)
 
 ## Documentation
 
 | Doc | Purpose |
 |-----|---------|
-| [QUICKSTART.md](docs/QUICKSTART.md) | Start here. Deploy to first test in ~25 min. |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Component details, observability layers, design decisions |
+| [QUICKSTART.md](docs/QUICKSTART.md) | Deploy to first test. Full walkthrough including MCP. |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Component details, failover sequences, design decisions |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | When things break |
+| [MCP_ONBOARDING.md](docs/MCP_ONBOARDING.md) | Three patterns for MCP server registration |
+| [DEEP_DIVES.md](docs/DEEP_DIVES.md) | Individual capability labs from Azure-Samples |
 
 ## Teardown
 
-```bash
-cd infra/terraform && terraform destroy
+```powershell
+az group delete -n rg-ai-gateway-demo -y --no-wait
 ```
 
-## Dashboard
+If redeploying with the same name prefix, purge the Foundry soft-deletes (names include your random suffix):
 
-The `dashboards/queries.md` file has all the KQL queries used in these panels. Paste them into an Azure Monitor Workbook pointed at your App Insights resource to recreate this dashboard.
-
-### Token usage by team
-
-![Token usage by team](docs/images/dashboard-token-by-team.png)
-
-Pie chart breaks down total token consumption across all three teams. Gamma burns through tokens fast for an innovation lab with a 500 TPM quota.
-
-### Token usage over time
-
-![Token usage over time](docs/images/dashboard-token-over-time.png)
-
-Per-team token consumption over time. The spikes correspond to test3 (load test) and test5 (failover test) runs.
-
-### Token usage by model
-
-![Token usage by model](docs/images/dashboard-token-by-model.png)
-
-Shows which models are consuming tokens. The `Model` dimension is extracted from the request body by the APIM policy.
-
-### Failover events
-
-![Failover events](docs/images/dashboard-failover-events.png)
-
-4xx errors split by region. "APIM Rate Limited" = requests rejected by `llm-token-limit` before reaching any backend. "East US 2" = backend 429s that triggered the circuit breaker.
-
-### Cost estimation by team
-
-![Cost estimation](docs/images/dashboard-cost-estimation.png)
-
-Per-team cost estimate based on token consumption. The rates are placeholder ($0.01/1K input tokens) but the structure is there for real pricing.
-
-## Coming next: centralized MCP governance
-
-The `scripts/policies/mcp-governance.xml` policy is scaffolding for the MCP governance scenario. Enterprises register MCP servers (tool-use endpoints) through APIM the same way they register LLM endpoints. APIM becomes the single control plane for both model inference and tool execution.
-
-What this will cover:
-
-- MCP server registration: register an MCP-compatible server (e.g., a search tool, database connector, or internal API) as an APIM API with the MCP protocol
-- Per-session rate limiting: `mcp-governance.xml` already differentiates between `tools/call` (write, 10/min) and `tools/list` (read, 60/min) based on the JSON-RPC method in the request body
-- Correlation and audit: every MCP request gets an `X-Correlation-Id` header, logged alongside LLM requests in the same Log Analytics workspace
-- API Center as the tool catalog: API Center (already deployed) becomes the discovery surface where teams find available MCP servers, their capabilities, and access policies
-- Onboarding workflow: how a platform team registers a new MCP server, assigns it to products, and sets rate limits
-
-This builds on top of the existing infrastructure. The APIM instance, monitoring, and product/subscription model are already in place. The MCP scenario adds a second API type alongside the Foundry AI Gateway.
-
-Status: policy XML written, no backend MCP server deployed yet. See [MCP servers in APIM](https://learn.microsoft.com/en-us/azure/api-management/mcp-server-overview) for the platform capabilities.
-
-Related files:
-
-| File | Purpose |
-|------|---------|
-| `scripts/policies/mcp-governance.xml` | APIM policy for per-method rate limiting on MCP calls |
-| `docs/MCP_ONBOARDING.md` | Guide for registering a new MCP server in APIM |
-| `infra/terraform/modules/api-center/main.tf` | API Center, the unified tool discovery catalog |
+```powershell
+az cognitiveservices account purge --name aigw-foundry-eus2-xxxx --resource-group rg-ai-gateway-demo --location eastus2
+az cognitiveservices account purge --name aigw-foundry-swc-xxxx --resource-group rg-ai-gateway-demo --location swedencentral
+```
 
 ## References
 
 - [AI gateway capabilities in Azure API Management](https://learn.microsoft.com/en-us/azure/api-management/genai-gateway-capabilities)
 - [GenAI gateway reference architecture (APIM-based)](https://learn.microsoft.com/en-us/ai/playbook/solutions/genai-gateway/reference-architectures/apim-based)
 - [Import a Microsoft Foundry API into APIM](https://learn.microsoft.com/en-us/azure/api-management/azure-ai-foundry-api)
-- [Azure OpenAI v1 API](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle)
-- [llm-emit-token-metric policy](https://learn.microsoft.com/en-us/azure/api-management/llm-emit-token-metric-policy)
-- [llm-token-limit policy](https://learn.microsoft.com/en-us/azure/api-management/llm-token-limit-policy)
 - [MCP servers in APIM](https://learn.microsoft.com/en-us/azure/api-management/mcp-server-overview)
 - [Azure-Samples/AI-Gateway (individual labs)](https://github.com/Azure-Samples/AI-Gateway)
 

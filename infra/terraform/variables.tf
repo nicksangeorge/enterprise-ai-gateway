@@ -54,3 +54,15 @@ variable "api_center_location" {
   type        = string
   default     = "eastus"
 }
+
+variable "enable_mcp_demo" {
+  description = "Deploy MCP demo infrastructure (tool-governance proxy, subscriptions, policies)"
+  type        = bool
+  default     = false
+}
+
+variable "mcp_server_url" {
+  description = "External MCP server URL for demo (e.g. the upstream tool server that APIM will proxy)"
+  type        = string
+  default     = null
+}

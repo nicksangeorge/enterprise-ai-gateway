@@ -1,7 +1,7 @@
 <policies>
     <inbound>
         <base />
-        <!-- Rate limit: 30 tool calls per minute per session -->
+        <!-- Rate limit: 10 tool calls per minute per session -->
         <set-variable name="body" value="@(context.Request.Body.As<string>(preserveContent: true))" />
         <choose>
             <when condition="@(
@@ -11,7 +11,7 @@
                 <!-- Prefix counter-key to avoid sharing with any other rate-limit-by-key
                      instances; v2 token-bucket merges counters with the same key value -->
                 <rate-limit-by-key
-                    calls="30"
+                    calls="10"
                     renewal-period="60"
                     counter-key="@(&quot;tc|&quot; + context.Request.Headers.GetValueOrDefault(&quot;Mcp-Session-Id&quot;, &quot;unknown&quot;))" />
             </when>

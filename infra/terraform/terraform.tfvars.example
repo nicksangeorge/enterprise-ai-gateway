@@ -1,4 +1,9 @@
-subscription_id = "<your-azure-subscription-id>"
+subscription_id  = "<your-azure-subscription-id>"
+
+# MCP Tool Governance (Phase 2)
+enable_mcp_demo  = true
+mcp_server_url   = "https://learn.microsoft.com/api/mcp"
+
 # Uncomment and customize as needed:
 # resource_group_name = "rg-ai-gateway-demo"
 # location_primary    = "eastus2"
