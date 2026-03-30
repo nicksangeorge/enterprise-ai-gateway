@@ -8,10 +8,10 @@ Reference implementation: APIM as the control plane for LLM traffic and agent to
 
 Enterprise AI platforms run into a common set of challenges:
 
-- **Model availability.** Quota throttling, regional outages, one team starving another. Production workloads need reliable inference.
-- **Cost visibility.** Which teams are consuming how many tokens, on which models, and what does it cost. Without this, AI spend is a black box.
-- **Tool governance.** Agents calling whatever tools they want with no standards. No centralized catalog or rate limits. No audit trail.
-- **Enforcement levers.** Your teams set the standards for how agents behave in production. They need infrastructure to enforce those standards: governed tool catalogs, rate limits per session, audit trails, and identity-scoped access.
+- **Model availability:** Quota throttling, regional outages, one team starving another. Production workloads need reliable inference.
+- **Cost visibility:** Which teams are consuming how many tokens, on which models, and what does it cost. Without this, AI spend is a black box.
+- **Tool governance:** Agents calling whatever tools they want with no standards. No centralized catalog or rate limits. No audit trail.
+- **Enforcement levers:** Your teams set the standards for how agents behave in production. They need infrastructure to enforce those standards: governed tool catalogs, rate limits per session, audit trails, and identity-scoped access.
 
 The repo implements a working answer using APIM, Foundry, and API Center. Here's what it looks like when deployed:
 
