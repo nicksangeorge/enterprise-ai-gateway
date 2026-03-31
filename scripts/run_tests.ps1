@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Runs AI Gateway v2 test suite sequentially with pass/fail reporting.
+    Runs AI Gateway test suite sequentially with pass/fail reporting.
 
 .PARAMETER SkipFailover
     Skip test5_failover.py (it scales down a Foundry deployment).
@@ -30,7 +30,7 @@ $failed  = 0
 $skipped = 0
 $results = @()
 
-Write-Host "`n===== AI Gateway v2 Test Suite =====" -ForegroundColor Cyan
+Write-Host "`n===== AI Gateway Test Suite =====" -ForegroundColor Cyan
 Write-Host ""
 
 foreach ($test in $tests) {
@@ -78,5 +78,9 @@ foreach ($r in $results) {
 }
 Write-Host ""
 Write-Host "Passed: $passed  Failed: $failed  Skipped: $skipped" -ForegroundColor $(if ($failed -gt 0) { "Red" } else { "Green" })
+Write-Host ""
+Write-Host "MCP tests run separately after QUICKSTART Steps 7-8:" -ForegroundColor Yellow
+Write-Host "  python tests/test_mcp_governance.py" -ForegroundColor Yellow
+Write-Host "  python tests/test_mcp_rate_limit.py" -ForegroundColor Yellow
 
 if ($failed -gt 0) { exit 1 }

@@ -1,6 +1,13 @@
+<!-- MCP governance with Entra ID authentication — use named values for tenant-id and allowed-client-app-id -->
 <policies>
     <inbound>
         <base />
+        <!-- Entra ID token validation -->
+        <validate-azure-ad-token tenant-id="{{tenant-id}}" header-name="Authorization" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized: Valid Entra ID token required">
+            <client-application-ids>
+                <application-id>{{allowed-client-app-id}}</application-id>
+            </client-application-ids>
+        </validate-azure-ad-token>
         <!-- Correlation ID for request tracing -->
         <set-header name="X-Correlation-Id" exists-action="override">
             <value>@(context.RequestId.ToString())</value>

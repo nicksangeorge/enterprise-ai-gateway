@@ -1,5 +1,12 @@
 # Onboarding MCP servers through APIM
 
+**Prerequisites:**
+- Azure subscription with Owner or Contributor role
+- APIM instance (Standard v2 tier or higher) deployed and running
+- Foundry AI Gateway enabled (portal step in [QUICKSTART.md](QUICKSTART.md) Part 3)
+- VS Code with Copilot extension for testing (optional but recommended)
+- External MCP server endpoint (for Pattern 1) or existing REST API in APIM (for Pattern 2)
+
 This walkthrough covers Part 5 of the demo: registering real MCP servers through APIM AI Gateway and applying governance policies. It demonstrates the enterprise workflow for tool onboarding.
 
 ## What we're demonstrating
@@ -35,7 +42,7 @@ Fill in:
 Select **Create**.
 
 The MCP server appears in the list with a Server URL like:
-`https://aigw-apim.azure-api.net/learn-mcp/mcp`
+`https://aigw-apim.azure-api.net/learn/mcp`
 
 ### Step 2: Apply governance policies
 
@@ -80,14 +87,14 @@ Add this policy (rate limit per MCP session + correlation ID):
 What this does:
 
 - Rate limiting: 30 `tools/call` requests per minute, keyed by MCP session ID. Other JSON-RPC methods (like `tools/list`) pass through unrestricted.
-- Correlation ID: tags every request with the APIM request ID so you can trace tool calls end-to-end in logs.
+- Correlation ID: tags every request with the APIM request ID so you can trace tool calls across the full request path in logs.
 
 ### Step 3: Test with VS Code
 
 In VS Code, use the **MCP: Add Server** command. Set:
 
 - **Server type**: HTTP
-- **Server URL**: `https://aigw-apim.azure-api.net/learn-mcp/mcp`
+- **Server URL**: `https://aigw-apim.azure-api.net/learn/mcp`
 - **Header**: `api-key` with your APIM subscription key
 
 Switch to Copilot agent mode. Select the tools from the MCP server. Ask it something like:
@@ -153,7 +160,7 @@ Key points to hit:
 
 - Two minutes to onboard. Registration is a few fields in the portal.
 - Policies apply uniformly. Same XML policy language APIM teams already know.
-- Observability included. Metrics, logs, tracing all work out of the box.
+- Observability included. Metrics, logs, and tracing work without extra setup.
 - No client-side changes. Consumers just point at the APIM URL.
 
 ---

@@ -1,0 +1,309 @@
+{
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json",
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "# AI Gateway — Token Chargeback Dashboard\n\nToken usage, cost attribution, and operational metrics for APIM AI Gateway.\nData source: App Insights custom metrics (`aigw-token-metrics`) and APIM diagnostic logs."
+      },
+      "name": "header"
+    },
+    {nts\Internal\ai-gateway> .\run_tests.ps1
+
+===== AI Gateway v2 Test Suite =====
+
+RUN   test1_connectivity - Basic connectivity     
+      Traceback (most recent call last):
+        File "C:\Users\nsangeorge\OneDrive - Microsoft\Documents\Internal\ai-gateway\tests\test1_connectivity.py", line 11, in <module>
+          r = client.chat.completions.create(     
+              model=MODEL,
+              messages=[{"role": "user", "content": "Say hello in one sentence."}],
+              max_completion_tokens=20,
+          )
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\_utils\_utils.py", line 286, in wrapper
+          return func(*args, **kwargs)
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\resources\chat\completions\completions.py", line 1192, in create
+          return self._post(
+                 ~~~~~~~~~~^
+              "/chat/completions",
+              ^^^^^^^^^^^^^^^^^^^^
+          ...<47 lines>...
+              stream_cls=Stream[ChatCompletionChunk],
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          )
+          ^
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\_base_client.py", line 1297, in post
+          return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)) 
+                                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\_base_client.py", line 1070, in request
+          raise self._make_status_error_from_response(err.response) from None
+      openai.NotFoundError: Error code: 404 - {'statusCode': 404, 'message': 'Resource not found'}  
+FAIL  test1_connectivity
+
+RUN   test2_model_router - Model Router
+      Traceback (most recent call last):
+        File "C:\Users\nsangeorge\OneDrive - Microsoft\Documents\Internal\ai-gateway\tests\test2_model_router.py", line 7, in <module>
+          r = client.chat.completions.create(     
+              model="model-router",
+              messages=[{"role": "user", "content": "What is 2+2?"}],
+              max_completion_tokens=10,
+          )
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\_utils\_utils.py", line 286, in wrapper
+          return func(*args, **kwargs)
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\resources\chat\completions\completions.py", line 1192, in create
+          return self._post(
+                 ~~~~~~~~~~^
+              "/chat/completions",
+              ^^^^^^^^^^^^^^^^^^^^
+          ...<47 lines>...
+              stream_cls=Stream[ChatCompletionChunk],
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          )
+          ^
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\_base_client.py", line 1297, in post
+          return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)) 
+                                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\_base_client.py", line 1070, in request
+          raise self._make_status_error_from_response(err.response) from None
+      openai.NotFoundError: Error code: 404 - {'statusCode': 404, 'message': 'Resource not found'}  
+FAIL  test2_model_router
+
+RUN   test3_load - Concurrent load
+        [Alpha] HTTP 404
+        [Alpha] HTTP 404
+        [Alpha] HTTP 404
+        [Alpha] HTTP 404
+        [Alpha] HTTP 404
+        [Beta] HTTP 404
+        [Beta] HTTP 404
+        [Beta] HTTP 404
+        [Beta] HTTP 404
+        [Beta] HTTP 404
+        [Gamma] HTTP 404
+        [Gamma] HTTP 404
+        [Gamma] HTTP 404
+        [Gamma] HTTP 404
+        [Gamma] HTTP 404
+
+      Total requests: 15
+PASS  test3_load
+
+RUN   test4_quota - Quota enforcement
+      [1] NotFoundError: Error code: 404 - {'statusCode': 404, 'message': 'Resource not found'}     
+      WARN: never hit 429 ù Gamma quota may be too high or not configured
+FAIL  test4_quota
+
+RUN   test5_failover - Circuit breaker failover   
+      Step 1: Scale eus2 to 1K TPM (capacity=1)
+        az: scaling aigw-foundry-eus2-b5gl/gpt-51 to capacity=1 ...
+      Traceback (most recent call last):
+        File "C:\Users\nsangeorge\OneDrive - Microsoft\Documents\Internal\ai-gateway\tests\test5_failover.py", line 52, in <module>
+          if not scale_deployment(1):
+                 ~~~~~~~~~~~~~~~~^^^
+        File "C:\Users\nsangeorge\OneDrive - Microsoft\Documents\Internal\ai-gateway\tests\test5_failover.py", line 42, in scale_deployment
+          result = subprocess.run(cmd, capture_output=True, text=True)
+        File "C:\Python314\Lib\subprocess.py", line 554, in run
+          with Popen(*popenargs, **kwargs) as process:
+               ~~~~~^^^^^^^^^^^^^^^^^^^^^^        
+        File "C:\Python314\Lib\subprocess.py", line 1038, in __init__
+          self._execute_child(args, executable, preexec_fn, close_fds,
+          ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              pass_fds, cwd, env, 
+                              ^^^^^^^^^^^^^^^^^^^ 
+          ...<5 lines>...
+                              gid, gids, uid, umask,
+                              ^^^^^^^^^^^^^^^^^^^^^^
+                              start_new_session, process_group)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        File "C:\Python314\Lib\subprocess.py", line 1552, in _execute_child
+          hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+                             ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+                                   # no special security
+                                   ^^^^^^^^^^^^^^^^^^^^^
+          ...<4 lines>...
+                                   cwd,
+                                   ^^^^
+                                   startupinfo)   
+                                   ^^^^^^^^^^^^   
+      FileNotFoundError: [WinError 2] The system cannot find the file specified
+FAIL  test5_failover
+
+RUN   test6_metrics - App Insights metrics        
+      Sending a request to generate token metrics...
+      Traceback (most recent call last):
+        File "C:\Users\nsangeorge\OneDrive - Microsoft\Documents\Internal\ai-gateway\tests\test6_metrics.py", line 13, in <module>
+          r = client.chat.completions.create(     
+              model=MODEL,
+              messages=[{"role": "user", "content": "Say hello in one sentence."}],
+              max_completion_tokens=20,
+          )
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\_utils\_utils.py", line 286, in wrapper
+          return func(*args, **kwargs)
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\resources\chat\completions\completions.py", line 1192, in create
+          return self._post(
+                 ~~~~~~~~~~^
+              "/chat/completions",
+              ^^^^^^^^^^^^^^^^^^^^
+          ...<47 lines>...
+              stream_cls=Stream[ChatCompletionChunk],
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          )
+          ^
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\_base_client.py", line 1297, in post
+          return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)) 
+                                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\_base_client.py", line 1070, in request
+          raise self._make_status_error_from_response(err.response) from None
+      openai.NotFoundError: Error code: 404 - {'statusCode': 404, 'message': 'Resource not found'}  
+FAIL  test6_metrics
+
+RUN   test7_llm_logs - LLM log generation
+      Sending a request to generate LLM log data...
+      Traceback (most recent call last):
+        File "C:\Users\nsangeorge\OneDrive - Microsoft\Documents\Internal\ai-gateway\tests\test7_llm_logs.py", line 14, in <module>
+          r = client.chat.completions.create(     
+              model=MODEL,
+              messages=[{"role": "user", "content": "Say hello in one sentence."}],
+              max_completion_tokens=20,
+          )
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\_utils\_utils.py", line 286, in wrapper
+          return func(*args, **kwargs)
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\resources\chat\completions\completions.py", line 1192, in create
+          return self._post(
+                 ~~~~~~~~~~^
+              "/chat/completions",
+              ^^^^^^^^^^^^^^^^^^^^
+          ...<47 lines>...
+              stream_cls=Stream[ChatCompletionChunk],
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          )
+          ^
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\_base_client.py", line 1297, in post
+          return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)) 
+                                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  
+        File "C:\Users\nsangeorge\AppData\Roaming\Python\Python314\site-packages\openai\_base_client.py", line 1070, in request
+          raise self._make_status_error_from_response(err.response) from None
+      openai.NotFoundError: Error code: 404 - {'statusCode': 404, 'message': 'Resource not found'}  
+PS C:\Users\nsangeorge\OneDrive - Microsoft\Documents\Internal\ai-gateway>
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "time-range",
+            "type": 4,
+            "name": "TimeRange",
+            "label": "Time Range",
+            "isRequired": true,
+            "value": {
+              "durationMs": 86400000
+            },
+            "typeSettings": {
+              "selectableValues": [
+                { "durationMs": 3600000, "displayName": "Last 1 hour" },
+                { "durationMs": 14400000, "displayName": "Last 4 hours" },
+                { "durationMs": 86400000, "displayName": "Last 24 hours" },
+                { "durationMs": 604800000, "displayName": "Last 7 days" }
+              ]
+            }
+          }
+        ]
+      },
+      "name": "parameters"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "customMetrics\n| where name == \"aigw-token-metrics\"\n| extend Team = tostring(customDimensions[\"Team\"])\n| where isnotempty(Team)\n| summarize TotalTokens = sum(value) by Team\n| order by TotalTokens desc",
+        "size": 2,
+        "title": "Token Usage by Team",
+        "timeContext": "{TimeRange}",
+        "queryType": 0,
+        "visualization": "piechart"
+      },
+      "name": "token-usage-by-team"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "customMetrics\n| where name == \"aigw-token-metrics\"\n| extend Team = tostring(customDimensions[\"Team\"])\n| where isnotempty(Team)\n| summarize Tokens = sum(value) by Team, bin(timestamp, 5m)\n| render timechart",
+        "size": 0,
+        "title": "Token Usage by Team Over Time",
+        "timeContext": "{TimeRange}",
+        "queryType": 0,
+        "visualization": "timechart"
+      },
+      "name": "token-usage-over-time"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "customMetrics\n| where name == \"aigw-token-metrics\"\n| extend Model = tostring(customDimensions[\"Model\"])\n| where isnotempty(Model)\n| summarize TotalTokens = sum(value) by Model\n| order by TotalTokens desc",
+        "size": 1,
+        "title": "Token Usage by Model",
+        "timeContext": "{TimeRange}",
+        "queryType": 0,
+        "visualization": "barchart"
+      },
+      "name": "token-usage-by-model"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "customMetrics\n| where name == \"aigw-token-metrics\"\n| extend Region = tostring(customDimensions[\"Region\"])\n| where isnotempty(Region)\n| summarize Tokens = sum(value) by Region, bin(timestamp, 5m)",
+        "size": 0,
+        "title": "Cross-Region Traffic Distribution",
+        "timeContext": "{TimeRange}",
+        "queryType": 0,
+        "visualization": "timechart"
+      },
+      "name": "cross-region-traffic"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "ApiManagementGatewayLogs\n| where ResponseCode == 429\n| extend Team = tostring(parse_json(tostring(RequestHeaders))[\"Ocp-Apim-Subscription-Name\"])\n| summarize Count = count() by bin(TimeGenerated, 5m), Team",
+        "size": 0,
+        "title": "Rate Limit Events (429s)",
+        "timeContext": "{TimeRange}",
+        "queryType": 0,
+        "visualization": "timechart"
+      },
+      "name": "rate-limit-events"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "ApiManagementGatewayLogs\n| where ResponseCode >= 400\n| extend Backend = tostring(BackendUrl)\n| summarize ErrorCount = count() by bin(TimeGenerated, 1m), Backend\n| order by TimeGenerated desc",
+        "size": 0,
+        "title": "Failover Events",
+        "timeContext": "{TimeRange}",
+        "queryType": 0,
+        "visualization": "timechart"
+      },
+      "name": "failover-events"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let cost_per_1k_input = 0.01;\nlet cost_per_1k_output = 0.03;\ncustomMetrics\n| where name == \"aigw-token-metrics\"\n| extend Team = tostring(customDimensions[\"Team\"])\n| extend Model = tostring(customDimensions[\"Model\"])\n| where isnotempty(Team)\n| summarize TotalTokens = sum(value) by Team, Model\n| extend EstimatedCost = TotalTokens / 1000.0 * cost_per_1k_input\n| order by EstimatedCost desc",
+        "size": 0,
+        "title": "Cost Estimation by Team",
+        "timeContext": "{TimeRange}",
+        "queryType": 0,
+        "visualization": "table"
+      },
+      "name": "cost-estimation"
+    }
+  ],
+  "styleSettings": {},
+  "defaultResourceIds": []
+}

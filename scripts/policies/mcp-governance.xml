@@ -1,0 +1,36 @@
+<policies>
+    <inbound>
+        <base />
+        <!-- Rate limit: 10 tool calls per minute per session -->
+        <set-variable name="body" value="@(context.Request.Body.As<string>(preserveContent: true))" />
+        <choose>
+            <when condition="@(
+                Newtonsoft.Json.Linq.JObject.Parse((string)context.Variables[&quot;body&quot;])[&quot;method&quot;] != null
+                && Newtonsoft.Json.Linq.JObject.Parse((string)context.Variables[&quot;body&quot;])[&quot;method&quot;].ToString() == &quot;tools/call&quot;
+            )">
+                <!-- Prefix counter-key to avoid sharing with any other rate-limit-by-key
+                     instances; v2 token-bucket merges counters with the same key value -->
+                <rate-limit-by-key
+                    calls="10"
+                    renewal-period="60"
+                    counter-key="@(&quot;tc|&quot; + context.Request.Headers.GetValueOrDefault(&quot;Mcp-Session-Id&quot;, &quot;unknown&quot;))" />
+            </when>
+        </choose>
+        <!-- Correlation ID for request tracing -->
+        <set-header name="X-Correlation-Id" exists-action="override">
+            <value>@(context.RequestId.ToString())</value>
+        </set-header>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+        <set-header name="X-Correlation-Id" exists-action="override">
+            <value>@(context.RequestId.ToString())</value>
+        </set-header>
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

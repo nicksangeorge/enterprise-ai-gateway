@@ -120,7 +120,7 @@ for status, idx, tokens, info in results:
 
 print(f"\nResults: {ok_count} OK, {rate_limited} rate-limited")
 if rate_limited > 0:
-    print("Circuit breaker triggered — failover confirmed.")
+    print("Circuit breaker triggered - failover confirmed.")
     print("Verify backend distribution in Log Analytics (wait 3-5 min for ingestion).")
 else:
     print("WARNING: No 429s seen. eus2 may have higher capacity than expected.")

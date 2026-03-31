@@ -220,3 +220,34 @@ resource "azurerm_api_management_product_policy" "gamma" {
   resource_group_name = var.resource_group_name
   xml_content         = file("${path.module}/policies/product-gamma.xml")
 }
+
+# Phase 2: MCP Tool Governance (conditional on enable_mcp_demo)
+
+resource "azurerm_api_management_product" "mcp_servers" {
+  count                 = var.enable_mcp_demo ? 1 : 0
+  product_id            = "mcp-servers"
+  api_management_name   = var.apim_name
+  resource_group_name   = var.resource_group_name
+  display_name          = "MCP Servers - Governed Tools"
+  description           = "MCP tool governance. Rate-limited by method type."
+  subscription_required = true
+  approval_required     = false
+  published             = true
+}
+
+resource "azurerm_api_management_subscription" "mcp_demo" {
+  count               = var.enable_mcp_demo ? 1 : 0
+  api_management_name = var.apim_name
+  resource_group_name = var.resource_group_name
+  product_id          = azurerm_api_management_product.mcp_servers[0].id
+  display_name        = "MCP Demo Subscription"
+  state               = "active"
+}
+
+resource "azurerm_api_management_product_policy" "mcp" {
+  count               = var.enable_mcp_demo ? 1 : 0
+  product_id          = azurerm_api_management_product.mcp_servers[0].product_id
+  api_management_name = var.apim_name
+  resource_group_name = var.resource_group_name
+  xml_content         = file("${path.module}/policies/product-mcp.xml")
+}

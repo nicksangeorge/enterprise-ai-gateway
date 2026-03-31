@@ -1,0 +1,18 @@
+<policies>
+    <inbound>
+        <base />
+        <!-- MCP Servers: bootstrap rate limit -->
+        <!-- Replace with mcp-governance.xml after registering MCP servers via setup-mcp-demo.ps1 -->
+        <rate-limit-by-key calls="100" renewal-period="60"
+            counter-key="@(context.Subscription.Id)" />
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

@@ -91,6 +91,8 @@ module "apim_config" {
   apim_system_identity_principal = module.apim.system_assigned_identity_principal_id
   prefix                         = var.prefix
   tags                           = var.tags
+  enable_mcp_demo                = var.enable_mcp_demo
+  mcp_server_url                 = var.mcp_server_url
 }
 
 # Phase 3: API Center (unified tool discovery catalog)

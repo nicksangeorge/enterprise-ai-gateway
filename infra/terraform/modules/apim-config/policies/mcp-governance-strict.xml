@@ -1,3 +1,4 @@
+<!-- Strict rate limiting for demo — makes rate limits visible in live demos -->
 <policies>
     <inbound>
         <base />
@@ -18,14 +19,14 @@
                 <!-- counter-key MUST differ from the otherwise branch; v2 token-bucket
                      uses a single counter per key value across all policy instances -->
                 <rate-limit-by-key
-                    calls="10"
+                    calls="5"
                     renewal-period="60"
                     counter-key="@(&quot;tc|&quot; + context.Request.Headers.GetValueOrDefault(&quot;Mcp-Session-Id&quot;, &quot;unknown&quot;))" />
             </when>
             <!-- Read operations (list tools, etc): more generous -->
             <otherwise>
                 <rate-limit-by-key
-                    calls="60"
+                    calls="15"
                     renewal-period="60"
                     counter-key="@(&quot;rd|&quot; + context.Request.Headers.GetValueOrDefault(&quot;Mcp-Session-Id&quot;, &quot;unknown&quot;))" />
             </otherwise>

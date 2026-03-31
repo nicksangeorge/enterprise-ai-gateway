@@ -41,3 +41,8 @@ output "team_gamma_subscription_key" {
 output "backend_pool_name" {
   value = module.apim_config.backend_pool_name
 }
+
+output "mcp_demo_subscription_key" {
+  value     = try(module.apim_config.mcp_demo_subscription_key, null)
+  sensitive = true
+}

@@ -122,3 +122,41 @@ The circuit breaker trips after 3 consecutive errors within 60 seconds on a back
 **401 on secondary region after failover**
 
 APIM's system identity needs RBAC on both Foundry accounts. The portal import wizard only grants it on the account you selected during import (East US 2). The post-deploy script grants it on Sweden Central. If you see 401s only when traffic fails over, the secondary RBAC assignment is missing. See the [Auth issues](#auth-issues) section above.
+
+## MCP issues
+
+**MCP server returns 403**
+
+The backend URL is missing the `/api` suffix. When registering an external MCP server through APIM, the **MCP server base URL** must include `/api` if that's part of the endpoint path. For example:
+- ❌ Wrong: `https://mcp-provider.example.com/mcp`
+- ✅ Correct: `https://mcp-provider.example.com/api/mcp`
+
+Check the MCP server's documentation for the correct endpoint and verify the full path is registered in APIM.
+
+**Policy validation fails on C# expressions**
+
+Custom C# policies in APIM require braces around the expression body. When writing policy validation logic for MCP tools:
+- ❌ Wrong: `@(context.Request.Body.Contains("tools/call"))`
+- ✅ Correct: `@{ return context.Request.Body.Contains("tools/call"); }`
+
+The `{ return ...; }` braces are mandatory even for single-line expressions. Use tools like the policy XML validator in APIM portal to catch these before deployment.
+
+**Rate limit tests fail for tool calls**
+
+StandardV2 tier uses token-bucket rate limiting, not sliding window. When testing MCP tool rate limits:
+- Token bucket means requests can burst up to the limit, then refill at a steady rate
+- Sliding window (older models) rejects as soon as the window fills
+- If your test expects gradual rejection but gets none, the bucket hasn't emptied yet
+- Run the test again after a full renewal period (`renewal-period` value in your policy)
+
+For reliable testing, either wait between test runs or use a backend that supports sliding-window rate limiting.
+
+**MCP registration requires portal (no ARM API)**
+
+As of March 2026, MCP server registration in APIM is portal-only. There is no ARM API or Terraform support for creating MCP servers. To register an MCP server:
+1. Open the Azure portal
+2. Navigate to **APIM instance** > **APIs** > **MCP Servers** > **+ Create MCP server**
+3. Fill in the server URL, transport type, and governance policies
+4. Save
+
+Governance policies (rate limiting, logging, correlation IDs) can be managed via ARM or Terraform after the server is created, but the initial registration must be done in the portal.
